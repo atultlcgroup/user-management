@@ -29,7 +29,7 @@ async function upload(filePath) {
   }).promise();
 }
 
-async function startS3UploadScheduler() {
+async function startS3UploadScheduler(skipCurrent = true) {
   if (!fs.existsSync(LOG_DIR)) return;
   console.log("Starting S3 upload scheduler for API logs...");
 
@@ -46,7 +46,7 @@ async function startS3UploadScheduler() {
   const latestFile = fileStats[0]?.path;
 
   for (const fileInfo of fileStats) {
-    if (fileInfo.path === latestFile) continue;
+    if (fileInfo.path === latestFile && skipCurrent) continue;
 
     try {
       await upload(fileInfo.path);
