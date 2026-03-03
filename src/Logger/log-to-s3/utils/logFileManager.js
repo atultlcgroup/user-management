@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const winston = require("winston");
+const {startS3UploadScheduler} = require("../helper/s3UploadHelper")
 
 const LOG_DIR = path.join(process.cwd(), process.env.LOG_DIRECTORY);
 const INTERVAL_MIN = Number(process.env.LOG_FILE_INTERVAL_MINUTES || 30);
@@ -40,13 +41,15 @@ function rotateTransport(logger) {
   }
   const newFileName = buildFileName();
   console.log(`Rotating log file. New file: ${newFileName}`);
-
   // Create new transport
   currentTransport = new winston.transports.File({
     filename: newFileName
   });
-
+  
   logger.add(currentTransport);
+
+  // Upload Files to S3
+  startS3UploadScheduler();
 
   clearTimeout(rotationTimer);
   rotationTimer = setTimeout(() => rotateTransport(logger), INTERVAL_MIN * 60000);

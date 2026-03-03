@@ -17,7 +17,6 @@ const LOG_DIR = path.join(process.cwd(), process.env.LOG_DIRECTORY);
 
 app.get("/log-files", (req, res)=> {
   if (!fs.existsSync(LOG_DIR)) return;
-    console.log("Starting S3 upload scheduler for API logs...");
   
     const files = fs.readdirSync(LOG_DIR);
     if (files.length === 0) return;
@@ -30,7 +29,6 @@ app.get("/log-files/:name", async (req, res) => {
   try {
     const fileName = req.params.name;
 
-    // 🚨 Prevent path traversal attacks
     if (fileName.includes("..") || fileName.includes("/")) {
       return res.status(400).json({ message: "Invalid file name" });
     }
