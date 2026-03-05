@@ -18,16 +18,24 @@ function buildFileName() {
   const end = new Date(start.getTime() + INTERVAL_MIN * 60000);
 
   const formatTime = (date) => {
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const ampm = date.getHours() >= 12 ? "PM" : "AM";
-    return `${hours}-${minutes} ${ampm}`;
+    const parts = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    }).formatToParts(date);
+
+    const hour = parts.find(p => p.type === "hour").value;
+    const minute = parts.find(p => p.type === "minute").value;
+    const dayPeriod = parts.find(p => p.type === "dayPeriod").value;
+
+    return `${hour}-${minute}${dayPeriod.toLocaleUpperCase()}`;
   };
 
   const startTime = formatTime(start);
   const endTime = formatTime(end);
-  const fileName = `${startTime}_${endTime}.json`;
 
+  const fileName = `${startTime}_${endTime}.json`;
   return path.join(LOG_DIR, fileName);
 }
 
@@ -48,7 +56,7 @@ function rotateTransport(logger) {
   
   logger.add(currentTransport);
 
-  // Upload Files to S3
+  // Upload Previous Files to S3
   startS3UploadScheduler();
 
   clearTimeout(rotationTimer);

@@ -28,7 +28,7 @@ function httpLogger(req, res, next) {
             headers: sanitizeHeaders(originalHeaders),
             body: sanitizeBody(req.body),
             queries: req.query,
-            response: sanitizeResponse(JSON.parse(responseBody)),
+            response: sanitizeResponse(JSON.parse(responseBody || "{}")),
             statusCode: res.statusCode,
             durationMs: Date.now() - start
         });
