@@ -25,8 +25,8 @@ function httpLogger(req, res, next) {
         logger.info({
             apiUrl: req.originalUrl,
             method: req.method,
-            headers: sanitizeHeaders(originalHeaders),
-            body: sanitizeBody(req.body),
+            headers: sanitizeHeaders(originalHeaders || {}),
+            body: sanitizeBody(req.body || {}),
             queries: req.query,
             response: sanitizeResponse(JSON.parse(responseBody || "{}")),
             statusCode: res.statusCode,

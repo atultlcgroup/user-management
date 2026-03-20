@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const AWS = require("aws-sdk");
+const { formatTime, formatDate } = require("../utils/formatDateAndTime");
 
 const LOG_DIR = path.join(process.cwd(), process.env.LOG_DIRECTORY);
 
@@ -14,13 +15,8 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-async function upload(filePath) {
-  const date = new Date();
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const s3Key = `logs/${yyyy}/${mm}/${dd}/${path.basename(String(filePath))}`;
-
+async function upload(filePath, s3Key) {
+  console.log(`Uploading log file to S3: ${path.basename(String(filePath))} as ${s3Key}`);
   return s3.upload({
     Bucket: process.env.S3_BUCKET_FOR_LOGS,
     Key: s3Key,
@@ -31,25 +27,34 @@ async function upload(filePath) {
 
 async function startS3UploadScheduler(skipCurrent = true) {
   if (!fs.existsSync(LOG_DIR)) return;
+
   console.log("Starting S3 upload scheduler for API logs...");
 
   const files = fs.readdirSync(LOG_DIR);
   if (files.length === 0) return;
 
-  // Sort by creation time and get the latest file
-  const fileStats = files.map(file => ({
-    name: file,
-    path: path.join(LOG_DIR, file),
-    time: fs.statSync(path.join(LOG_DIR, file)).birthtime
-  })).sort((a, b) => b.time - a.time);
+  const fileStats = files.map(file => {
+    const fullPath = path.join(LOG_DIR, file);
+    const stats = fs.statSync(fullPath);
 
-  const latestFile = fileStats[0]?.path;
+    return {
+      name: file,
+      path: fullPath,
+      created: stats.birthtime,
+      modified: stats.mtime
+    };
+  }).sort((a, b) => b.modified - a.modified);
+
+  const latestFile = fileStats[0];
 
   for (const fileInfo of fileStats) {
-    if (fileInfo.path === latestFile && skipCurrent) continue;
+    const isLatest = fileInfo.path === latestFile?.path;
+    if (isLatest && skipCurrent) continue;
 
     try {
-      await upload(fileInfo.path);
+      const s3Key = getS3Key(fileInfo, isLatest, skipCurrent);
+
+      await upload(fileInfo.path, s3Key);
       fs.unlinkSync(fileInfo.path);
 
       console.log(`Uploaded & Deleted log file: ${fileInfo.name}`);
@@ -57,6 +62,25 @@ async function startS3UploadScheduler(skipCurrent = true) {
       console.error(`S3 upload failed: ${fileInfo.name}`, err.message);
     }
   }
+}
+
+function getS3Key(fileInfo, isLatest, skipCurrent) {
+  const fileName = path.basename(fileInfo.path);
+
+  const parts = fileName.replace(".json", "").split("_");
+
+  const startStr = parts[0];
+  let endStr = parts[1];
+
+  if (isLatest && !skipCurrent) {
+    endStr = formatTime(new Date());
+  }
+
+  const newFileName = `${startStr}_${endStr}.json`;
+
+  const formattedDate = formatDate(new Date());
+
+  return `logs/${formattedDate}/${newFileName}`;
 }
 
 module.exports = { startS3UploadScheduler };

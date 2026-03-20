@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const winston = require("winston");
-const {startS3UploadScheduler} = require("../helper/s3UploadHelper")
+const { startS3UploadScheduler } = require("../helper/s3UploadHelper");
+const { formatTime } = require("./formatDateAndTime");
 
 const LOG_DIR = path.join(process.cwd(), process.env.LOG_DIRECTORY);
 const INTERVAL_MIN = Number(process.env.LOG_FILE_INTERVAL_MINUTES || 30);
@@ -16,21 +17,6 @@ function ensureDir() {
 function buildFileName() {
   const start = new Date();
   const end = new Date(start.getTime() + INTERVAL_MIN * 60000);
-
-  const formatTime = (date) => {
-    const parts = new Intl.DateTimeFormat("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    }).formatToParts(date);
-
-    const hour = parts.find(p => p.type === "hour").value;
-    const minute = parts.find(p => p.type === "minute").value;
-    const dayPeriod = parts.find(p => p.type === "dayPeriod").value;
-
-    return `${hour}-${minute}${dayPeriod.toLocaleUpperCase()}`;
-  };
 
   const startTime = formatTime(start);
   const endTime = formatTime(end);
@@ -53,7 +39,7 @@ function rotateTransport(logger) {
   currentTransport = new winston.transports.File({
     filename: newFileName
   });
-  
+
   logger.add(currentTransport);
 
   // Upload Previous Files to S3
