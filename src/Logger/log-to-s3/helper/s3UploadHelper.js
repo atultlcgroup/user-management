@@ -79,8 +79,23 @@ function getS3Key(fileInfo, isLatest, skipCurrent) {
   const newFileName = `${startStr}_${endStr}.json`;
 
   const formattedDate = formatDate(new Date());
+  const { full, type } = getDynoInfo();
 
-  return `logs/${formattedDate}/${newFileName}`;
+  const s3Key = `logs/${formattedDate}/${type}/${full}/${fileName}`;
+
+  return s3Key;
+}
+
+function getDynoInfo() {
+  const dyno = process.env.DYNO || "local";
+
+  const [type, number] = dyno.split(".");
+
+  return {
+    full: dyno,          // "web.1"
+    type: type || "app", // "web" / "worker"
+    number: number || "0"
+  };
 }
 
 module.exports = { startS3UploadScheduler };
