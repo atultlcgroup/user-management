@@ -30,7 +30,8 @@ function httpLogger(req, res, next) {
             queries: req.query,
             response: sanitizeResponse(JSON.parse(responseBody || "{}")),
             statusCode: res.statusCode,
-            durationMs: Date.now() - start
+            durationMs: Date.now() - start,
+            dyno: process.env.DYNO || "local"
         });
     });
 
